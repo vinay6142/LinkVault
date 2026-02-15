@@ -93,172 +93,192 @@ function UploadForm({ onSubmit, isLoading }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Upload Type Selection */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          What would you like to share?
-        </label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="text"
-              checked={uploadType === 'text'}
-              onChange={(e) => setUploadType(e.target.value)}
-              className="w-4 h-4"
-            />
-            <span className="text-gray-700 dark:text-gray-300">📝 Text</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="file"
-              checked={uploadType === 'file'}
-              onChange={(e) => setUploadType(e.target.value)}
-              className="w-4 h-4"
-            />
-            <span className="text-gray-700 dark:text-gray-300">📁 File</span>
-          </label>
+    <form onSubmit={handleSubmit} className="space-y-7 animate-fade-in">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-bold text-gradient mb-2">Share Your Content</h2>
+        <p className="text-gray-600 dark:text-gray-400">Choose what you'd like to share</p>
+      </div>
+
+      {/* Upload Type Selection - Enhanced */}
+      <div className="space-y-3">
+        <label className="label">What would you like to share?</label>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setUploadType('text')}
+            className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+              uploadType === 'text'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className="text-3xl mb-2">📝</div>
+            <div className="font-semibold text-gray-900 dark:text-white">Text</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Plain text</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setUploadType('file')}
+            className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+              uploadType === 'file'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className="text-3xl mb-2">📁</div>
+            <div className="font-semibold text-gray-900 dark:text-white">File</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Any format</div>
+          </button>
         </div>
       </div>
 
       {/* Text Input */}
       {uploadType === 'text' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Text Content
-          </label>
+        <div className="space-y-2 animate-fade-in">
+          <label className="label">Text Content</label>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Enter the text you want to share..."
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="input-field font-mono text-sm"
             rows="8"
           />
-          {errors.text && <p className="text-red-500 text-sm mt-1">{errors.text}</p>}
+          {errors.text && <p className="error-message">{errors.text}</p>}
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {text.length} characters
+          </div>
         </div>
       )}
 
       {/* File Input */}
       {uploadType === 'file' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Select File
-          </label>
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition-colors">
+        <div className="space-y-2 animate-fade-in">
+          <label className="label">Select File</label>
+          <div className="border-3 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-200">
             <input
               type="file"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="hidden"
               id="fileInput"
             />
-            <label htmlFor="fileInput" className="cursor-pointer">
+            <label htmlFor="fileInput" className="cursor-pointer block">
               {file ? (
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300 font-medium">📄 {file.name}</p>
-                  <p className="text-gray-500 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <div className="space-y-2">
+                  <div className="text-4xl">✓</div>
+                  <p className="text-gray-900 dark:text-white font-semibold">{file.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
                 </div>
               ) : (
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300 font-medium">Click to select file</p>
-                  <p className="text-gray-500 text-sm">Max 50MB</p>
+                <div className="space-y-2">
+                  <div className="text-4xl">📤</div>
+                  <p className="text-gray-900 dark:text-white font-semibold">Click to select file</p>
+                  <p className="text-xs text-gray-500">Max 50MB</p>
                 </div>
               )}
             </label>
           </div>
-          {errors.file && <p className="text-red-500 text-sm mt-1">{errors.file}</p>}
+          {errors.file && <p className="error-message">{errors.file}</p>}
         </div>
       )}
 
       {/* Optional Settings */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Optional Settings</h3>
+      <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-6">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <span className="text-xl">⚙️</span> Optional Settings
+        </h3>
 
-        {/* Password Protection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Password (Optional)
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Set a password for this share..."
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-
-        {/* One Time View */}
-        <div className="mb-4">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div className="grid grid-cols-1 gap-6">
+          {/* Password Protection */}
+          <div className="space-y-2">
+            <label className="label">🔐 Password (Optional)</label>
             <input
-              type="checkbox"
-              checked={isOneTimeView}
-              onChange={(e) => setIsOneTimeView(e.target.checked)}
-              className="w-4 h-4"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Set a password for this share..."
+              className="input-field"
             />
-            <span className="text-gray-700 dark:text-gray-300">One-time view only</span>
-          </label>
-        </div>
-
-        {/* Max View Count */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Max View Count (Optional)
-          </label>
-          <input
-            type="number"
-            value={maxViewCount}
-            onChange={(e) => setMaxViewCount(e.target.value)}
-            placeholder="e.g., 5 (leave empty for unlimited)"
-            min="1"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-
-        {/* Expiry Time */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Expiry Settings (Optional - Default: 10 minutes)
-          </label>
-
-          {/* Option 1: Expiry Date and Time */}
-          <div className="mb-4">
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Specify expiry date and time
-            </label>
-            <input
-              type="datetime-local"
-              value={expiryDateTime}
-              onChange={(e) => {
-                setExpiryDateTime(e.target.value);
-                if (e.target.value) setExpiryMinutes(''); // Clear minutes if datetime is set
-              }}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            />
-            {errors.expiryDateTime && <p className="text-red-500 text-sm mt-1">{errors.expiryDateTime}</p>}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Anyone with the link needs this password to access the content
+            </p>
           </div>
 
-          <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4">OR</div>
-
-          {/* Option 2: Expiry Minutes */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Specify expiry in minutes
+          {/* Checkboxes */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input
+                type="checkbox"
+                checked={isOneTimeView}
+                onChange={(e) => setIsOneTimeView(e.target.checked)}
+                className="w-5 h-5 accent-blue-500 cursor-pointer"
+              />
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">⚡ One-time view</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Delete after first access</div>
+              </div>
             </label>
+          </div>
+
+          {/* Max View Count */}
+          <div className="space-y-2">
+            <label className="label">👁️ Max View Count (Optional)</label>
             <input
               type="number"
-              value={expiryMinutes}
-              onChange={(e) => {
-                setExpiryMinutes(e.target.value);
-                if (e.target.value) setExpiryDateTime(''); // Clear datetime if minutes is set
-              }}
-              placeholder="e.g., 30 (will expire in 30 minutes)"
+              value={maxViewCount}
+              onChange={(e) => setMaxViewCount(e.target.value)}
+              placeholder="e.g., 5 (leave empty for unlimited)"
               min="1"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="input-field"
             />
-            {errors.expiry && <p className="text-red-500 text-sm mt-1">{errors.expiry}</p>}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              How many times can this be viewed?
+            </p>
+          </div>
+
+          {/* Expiry Time */}
+          <div className="space-y-3">
+            <label className="label">⏱️ Expiry Settings (Default: 10 minutes)</label>
+
+            {/* DateTime Option */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Expire at specific time
+              </label>
+              <input
+                type="datetime-local"
+                value={expiryDateTime}
+                onChange={(e) => {
+                  setExpiryDateTime(e.target.value);
+                  if (e.target.value) setExpiryMinutes('');
+                }}
+                className="input-field text-sm"
+              />
+              {errors.expiryDateTime && <p className="error-message">{errors.expiryDateTime}</p>}
+            </div>
+
+            <div className="text-center text-xs font-medium text-gray-400">OR</div>
+
+            {/* Minutes Option */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Expire in N minutes
+              </label>
+              <input
+                type="number"
+                value={expiryMinutes}
+                onChange={(e) => {
+                  setExpiryMinutes(e.target.value);
+                  if (e.target.value) setExpiryDateTime('');
+                }}
+                placeholder="e.g., 30"
+                min="1"
+                className="input-field text-sm"
+              />
+              {errors.expiry && <p className="error-message">{errors.expiry}</p>}
+            </div>
           </div>
         </div>
       </div>
@@ -267,9 +287,18 @@ function UploadForm({ onSubmit, isLoading }) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-medium py-3 rounded-lg transition-colors duration-200"
+        className="w-full btn-primary text-lg py-4 font-bold disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
-        {isLoading ? 'Uploading...' : uploadType === 'text' ? 'Share Text' : 'Share File'}
+        {isLoading ? (
+          <>
+            <span className="inline-block animate-spin">⏳</span>
+            Uploading...
+          </>
+        ) : (
+          <>
+            {uploadType === 'text' ? '📝 Share Text' : '📁 Share File'}
+          </>
+        )}
       </button>
     </form>
   );

@@ -227,17 +227,20 @@ router.delete('/delete/:shareId', optionalAuthMiddleware, async (req, res) => {
   try {
     const { shareId } = req.params;
 
+    // Delete requires authentication
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Authentication required to delete shares' });
+    }
+
     const share = await Share.findOne({ shareId });
 
     if (!share) {
       return res.status(404).json({ error: 'Content not found' });
     }
 
-    // If user is authenticated, check if they own the share
-    if (req.userId) {
-      if (share.userId !== req.userId) {
-        return res.status(403).json({ error: 'You do not have permission to delete this share' });
-      }
+    // Check if user owns the share
+    if (share.userId !== req.userId) {
+      return res.status(403).json({ error: 'You do not have permission to delete this share' });
     }
 
     // Delete file from Supabase Storage if it's a file share
@@ -311,6 +314,7 @@ router.get('/info/:shareId', async (req, res) => {
     res.json({
       success: true,
       shareId,
+      userId: share.userId,
       contentType: share.contentType,
       fileName: share.fileName,
       fileSize: share.fileSize,

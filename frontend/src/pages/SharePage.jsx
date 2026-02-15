@@ -6,10 +6,17 @@ import PasswordPrompt from '../components/PasswordPrompt';
 import TextDisplay from '../components/TextDisplay';
 import FileDisplay from '../components/FileDisplay';
 
+// Helper function to check if user can delete
+function canUserDelete(user, shareInfo) {
+  if (!user) return false;
+  if (!shareInfo || !shareInfo.userId) return false;
+  return user.id === shareInfo.userId;
+}
+
 function SharePage() {
   const { shareId } = useParams();
   const navigate = useNavigate();
-  const { getAuthToken } = useAuth();
+  const { getAuthToken, user } = useAuth();
   const hasLoadedRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
@@ -111,94 +118,153 @@ function SharePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading share...</p>
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-200 dark:border-blue-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin"></div>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Loading share...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-12">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 py-12 transition-colors duration-300">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {error && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-            <div className="text-red-600 dark:text-red-400 text-center">
-              <h2 className="text-2xl font-bold mb-2">❌ Error</h2>
-              <p className="text-lg">{error}</p>
-              <button
-                onClick={() => navigate('/')}
-                className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
-              >
-                Back to Home
-              </button>
+          <div className="mb-6 animate-slide-up">
+            <div className="card-elevated p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">❌</span>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Error</h2>
+                  <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
+                  <button
+                    onClick={() => navigate('/')}
+                    className="btn-primary"
+                  >
+                    Back to Home
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {needsPassword && (
-          <PasswordPrompt onSubmit={handlePasswordSubmit} isLoading={loading} />
+          <div className="animate-slide-up">
+            <PasswordPrompt onSubmit={handlePasswordSubmit} isLoading={loading} />
+          </div>
         )}
 
         {content && !isPermanentlyExpired && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            {content.contentType === 'text' && (
-              <TextDisplay content={content} />
-            )}
-
-            {content.contentType === 'file' && (
-              <FileDisplay content={content} />
-            )}
-
-            {shareInfo?.isOneTimeView && (
-              <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  ⚠️ This is a one-time view link. The content will be deleted after this view.
-                </p>
+          <div className="animate-slide-up space-y-6">
+            {/* Main Content Card */}
+            <div className="card-elevated overflow-hidden">
+              {/* Header with gradient */}
+              <div className="h-32 bg-gradient-primary relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                </div>
               </div>
-            )}
 
-            {shareInfo?.maxViewCount && (
-              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Views: {content.viewCount}/{shareInfo.maxViewCount}
-                </p>
+              {/* Content Area */}
+              <div className="px-8 py-8 sm:px-10 sm:py-10">
+                <div className="flex items-center justify-between mb-8">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+                    {content.contentType === 'text' ? '📄' : '📁'} {content.contentType === 'text' ? 'Text Content' : 'File Download'}
+                  </h1>
+                  {shareInfo?.isOneTimeView && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                      ⚡ One-time
+                    </span>
+                  )}
+                </div>
+
+                {/* Content Display */}
+                <div className="mb-8">
+                  {content.contentType === 'text' && (
+                    <TextDisplay content={content} />
+                  )}
+
+                  {content.contentType === 'file' && (
+                    <FileDisplay content={content} />
+                  )}
+                </div>
+
+                {/* Info Section */}
+                <div className="space-y-4">
+                  {shareInfo?.isOneTimeView && (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg">
+                      <p className="text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                        <span className="text-lg">⚠️</span>
+                        This is a one-time view link. The content will be deleted after this view.
+                      </p>
+                    </div>
+                  )}
+
+                  {shareInfo?.maxViewCount && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Views remaining</p>
+                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{shareInfo.maxViewCount - content.viewCount}/{shareInfo.maxViewCount}</p>
+                      </div>
+                      <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.max(0, ((shareInfo.maxViewCount - content.viewCount) / shareInfo.maxViewCount) * 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
 
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={handleDelete}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 rounded-lg transition-colors"
-              >
-                Delete
-              </button>
+            {/* Actions */}
+            <div className="flex gap-3">
+              {canUserDelete(user, shareInfo) && (
+                <button
+                  onClick={handleDelete}
+                  className="btn-danger flex-1"
+                >
+                  🗑️ Delete Share
+                </button>
+              )}
               <button
                 onClick={() => navigate('/')}
-                className="flex-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-900 dark:text-white font-medium py-2 rounded-lg transition-colors"
+                className={`btn-secondary ${canUserDelete(user, shareInfo) ? 'flex-1' : 'w-full'}`}
               >
-                Back to Home
+                ← Back to Home
               </button>
             </div>
           </div>
         )}
 
         {isPermanentlyExpired && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              ⏰ Link Expired
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              This one-time link has already been viewed and is no longer available.
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
-            >
-              Back to Home
-            </button>
+          <div className="animate-slide-up">
+            <div className="card-elevated p-8 sm:p-12 text-center">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">⏰</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Link Expired
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                This one-time link has already been viewed and is no longer available.
+              </p>
+              <button
+                onClick={() => navigate('/')}
+                className="btn-primary"
+              >
+                Create a New Share
+              </button>
+            </div>
           </div>
         )}
       </div>
