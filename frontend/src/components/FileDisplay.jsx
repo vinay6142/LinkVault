@@ -11,9 +11,6 @@ function FileDisplay({ content }) {
 
     setIsDownloading(true);
     try {
-      console.log('📥 Starting file download:', content.fileName);
-      console.log('📍 File URL available, length:', content.fileUrl?.length || 0);
-
       // Fetch file with proper error handling and CORS support
       const response = await fetch(content.fileUrl, {
         method: 'GET',
@@ -22,12 +19,6 @@ function FileDisplay({ content }) {
         },
         mode: 'cors', // Enable CORS
         credentials: 'omit', // Don't send cookies for Supabase URLs
-      });
-
-      console.log('📊 Response status:', response.status);
-      console.log('📊 Response headers:', {
-        contentType: response.headers.get('content-type'),
-        contentLength: response.headers.get('content-length'),
       });
 
       if (!response.ok) {
@@ -59,14 +50,11 @@ function FileDisplay({ content }) {
       }
 
       // Download the file
-      console.log('⬇️ Converting response to blob...');
       const blob = await response.blob();
 
       if (blob.size === 0) {
         throw new Error('Downloaded file is empty. Please try again.');
       }
-
-      console.log('✓ File downloaded successfully, size:', blob.size, 'bytes');
 
       // Create download link and trigger download
       const downloadUrl = URL.createObjectURL(blob);
@@ -75,14 +63,12 @@ function FileDisplay({ content }) {
       link.download = content.fileName || 'download';
       document.body.appendChild(link);
 
-      console.log('🔗 Triggering browser download...');
       link.click();
       document.body.removeChild(link);
 
       // Clean up
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
 
-      console.log('✓ Download completed successfully!');
       alert('✓ File downloaded successfully!');
     } catch (error) {
       console.error('❌ Download error:', error);
