@@ -35,6 +35,8 @@ cd backend
 npm install
 cp .env.example .env
 ```
+**3. Mongodb run:**
+``` sudo systemctl start mongodb```
 
 Edit `.env`:
 ```env
