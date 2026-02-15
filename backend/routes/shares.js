@@ -139,23 +139,27 @@ router.post('/view/:shareId', async (req, res) => {
     // Check password if protected
     if (share.isPasswordProtected) {
       if (!password) {
-        return res.status(403).json({ error: 'Password required' });
+        console.log('Password required for share:', shareId);
+        return res.status(403).json({ success: false, error: 'Password required' });
       }
       const isPasswordValid = await comparePassword(password, share.password);
       if (!isPasswordValid) {
-        return res.status(403).json({ error: 'Invalid password' });
+        console.log('Invalid password for share:', shareId);
+        return res.status(403).json({ success: false, error: 'Invalid password' });
       }
+      console.log('Password validation passed for share:', shareId);
     }
 
     // Check one-time view
     if (share.isOneTimeView && share.viewCount > 0) {
-      return res.status(403).json({ error: 'This link can only be viewed once' });
+      console.log('One-time view already accessed for share:', shareId);
+      return res.status(403).json({ success: false, error: 'This link can only be viewed once' });
     }
 
     // Check max view count BEFORE incrementing
     if (share.maxViewCount && share.viewCount >= share.maxViewCount) {
       console.log(`Max view count reached: ${share.viewCount} >= ${share.maxViewCount}`);
-      return res.status(403).json({ error: 'Maximum view count reached' });
+      return res.status(403).json({ success: false, error: 'Maximum view count reached' });
     }
 
     console.log('Incrementing view count...');
@@ -170,43 +174,67 @@ router.post('/view/:shareId', async (req, res) => {
       { new: true }
     );
 
-    // If one-time view, delete immediately after sending response
-    if (share.isOneTimeView) {
-      setTimeout(async () => {
-        // Delete file from Supabase Storage if it's a file share
-        if (share.contentType === 'file' && share.storagePath) {
-          await deleteFileFromStorage(share.storagePath).catch((err) => {
-            console.warn('Failed to delete one-time view file from storage:', err);
-          });
-        }
-        await Share.deleteOne({ shareId });
-      }, 100);
-    }
+    // Prepare response based on content type
+    let responseData;
+
+    console.log('Preparing response for contentType:', share.contentType);
 
     if (share.contentType === 'text') {
-      return res.json({
+      responseData = {
         success: true,
         contentType: 'text',
         content: share.textContent,
         viewCount: updatedShare.viewCount,
-      });
+      };
+      console.log('Text content response ready');
     } else {
-      let fileUrl = share.fileUrl;
+      // For files: ALWAYS generate fresh signed URL (don't use stored one, it may be expired)
+      let fileUrl = null;
 
-      // If fileUrl is missing (failed during upload), regenerate signed URL
-      if (!fileUrl && share.storagePath) {
-        console.log('Regenerating signed URL for:', share.storagePath);
+      if (share.storagePath) {
+        console.log('Generating fresh signed URL for file download:', share.storagePath);
         const signedUrlResult = await getSignedUrl(share.storagePath, 3600);
+
         if (signedUrlResult.success) {
           fileUrl = signedUrlResult.signedUrl;
-          // Update the database with the new URL
-          await Share.updateOne({ shareId }, { fileUrl });
+          console.log('✓ Fresh signed URL generated successfully, URL length:', fileUrl?.length || 0);
         } else {
-          console.warn('Failed to regenerate signed URL:', signedUrlResult.error);
+          console.error('✗ Failed to generate signed URL on view:', signedUrlResult.error);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to generate download link. Please try again.',
+            debug: signedUrlResult.error,
+          });
+        }
+      } else {
+        // Fallback for old files - try to reconstruct the path from shareId and fileName
+        console.warn('⚠️ No storage path found, attempting fallback for old files...');
+        if (share.fileName) {
+          const fallbackPath = `${share.shareId}/${share.fileName}`;
+          console.log('Attempting fallback path:', fallbackPath);
+          const signedUrlResult = await getSignedUrl(fallbackPath, 3600);
+
+          if (signedUrlResult.success) {
+            fileUrl = signedUrlResult.signedUrl;
+            console.log('✓ Fallback signed URL generated successfully');
+          } else {
+            console.error('✗ Fallback also failed - file may not exist in Supabase:', shareId);
+            return res.status(500).json({
+              success: false,
+              error: 'File not found. It may have been deleted from storage.',
+              debug: 'storagePath missing and fallback failed',
+            });
+          }
+        } else {
+          console.error('✗ Cannot recover - no fileName or storagePath:', shareId);
+          return res.status(500).json({
+            success: false,
+            error: 'File information incomplete',
+          });
         }
       }
 
-      return res.json({
+      responseData = {
         success: true,
         contentType: 'file',
         fileName: share.fileName,
@@ -214,11 +242,42 @@ router.post('/view/:shareId', async (req, res) => {
         fileSize: share.fileSize,
         fileMimeType: share.fileMimeType,
         viewCount: updatedShare.viewCount,
-      });
+      };
+      console.log('✓ File content response ready');
+      console.log('  - fileName:', share.fileName);
+      console.log('  - fileSize:', share.fileSize);
+      console.log('  - fileUrl present:', !!fileUrl);
+      console.log('  - fileUrl starts with https:', fileUrl?.startsWith('https://') || false);
     }
+
+    // If one-time view, delete after sending response
+    // Wait 30 seconds to ensure user has time to download the file (even large files)
+    if (share.isOneTimeView) {
+      console.log('Scheduling one-time view deletion for:', shareId, '(30 second delay)');
+      setTimeout(async () => {
+        try {
+          // Delete file from Supabase Storage if it's a file share
+          if (share.contentType === 'file' && share.storagePath) {
+            console.log('Deleting file from storage:', share.storagePath);
+            await deleteFileFromStorage(share.storagePath).catch((err) => {
+              console.warn('Warning: Failed to delete one-time file from storage:', err);
+            });
+          }
+          // Delete the document
+          console.log('Deleting one-time share document:', shareId);
+          await Share.deleteOne({ shareId });
+          console.log('✓ One-time view share deleted successfully:', shareId);
+        } catch (error) {
+          console.error('✗ Error deleting one-time share:', shareId, error);
+        }
+      }, 30000); // Wait 30 seconds (30000ms) - gives users time to download files
+    }
+
+    console.log('Sending successful response for share:', shareId, 'viewCount:', responseData.viewCount);
+    return res.json(responseData);
   } catch (error) {
-    console.error('View error:', error);
-    res.status(500).json({ error: 'Failed to retrieve content' });
+    console.error('✗ View error:', error);
+    res.status(500).json({ success: false, error: 'Failed to retrieve content', debug: error.message });
   }
 });
 

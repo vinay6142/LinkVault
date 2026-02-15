@@ -5,30 +5,88 @@ function FileDisplay({ content }) {
 
   const handleDownload = async () => {
     if (!content.fileUrl) {
-      alert('File URL not available. Please try again later.');
+      alert('❌ File URL not available. Please refresh the page and try again.');
       return;
     }
 
     setIsDownloading(true);
     try {
-      // fileUrl is now a Supabase signed URL
-      // Download directly from the signed URL
-      const response = await fetch(content.fileUrl);
+      console.log('📥 Starting file download:', content.fileName);
+      console.log('📍 File URL available, length:', content.fileUrl?.length || 0);
+
+      // Fetch file with proper error handling and CORS support
+      const response = await fetch(content.fileUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*',
+        },
+        mode: 'cors', // Enable CORS
+        credentials: 'omit', // Don't send cookies for Supabase URLs
+      });
+
+      console.log('📊 Response status:', response.status);
+      console.log('📊 Response headers:', {
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length'),
+      });
+
       if (!response.ok) {
-        throw new Error(`Failed to download file (HTTP ${response.status})`);
+        // Provide detailed error messages based on HTTP status
+        if (response.status === 400) {
+          throw new Error(
+            'Invalid download request (HTTP 400).\n\n' +
+            'Possible causes:\n' +
+            '• File link expired\n' +
+            '• Supabase bucket not public\n' +
+            '• File has been deleted\n\n' +
+            'Try: Refresh page or request a new share link'
+          );
+        } else if (response.status === 403) {
+          throw new Error('Access denied (HTTP 403). You may not have permission to download this file.');
+        } else if (response.status === 404) {
+          throw new Error('File not found (HTTP 404). It may have been deleted or is no longer available.');
+        } else if (response.status === 500) {
+          throw new Error('Server error (HTTP 500) while processing your download. Please try again.');
+        } else {
+          throw new Error(`Download failed with HTTP ${response.status}. Please try again.`);
+        }
       }
+
+      // Check if we got valid content
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) === 0) {
+        throw new Error('File is empty. It may have been corrupted or deleted.');
+      }
+
+      // Download the file
+      console.log('⬇️ Converting response to blob...');
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = content.fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+
+      if (blob.size === 0) {
+        throw new Error('Downloaded file is empty. Please try again.');
+      }
+
+      console.log('✓ File downloaded successfully, size:', blob.size, 'bytes');
+
+      // Create download link and trigger download
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = content.fileName || 'download';
+      document.body.appendChild(link);
+
+      console.log('🔗 Triggering browser download...');
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+
+      console.log('✓ Download completed successfully!');
+      alert('✓ File downloaded successfully!');
     } catch (error) {
-      console.error('Download error:', error);
-      alert(`Failed to download file: ${error.message}`);
+      console.error('❌ Download error:', error);
+      alert(`❌ Failed to download file:\n\n${error.message}`);
     } finally {
       setIsDownloading(false);
     }

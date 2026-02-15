@@ -75,23 +75,32 @@ function SharePage() {
 
         // fileUrl is now a Supabase signed URL (not base64 anymore)
         // No need to convert anything - the URL can be used directly
+
+        // For one-time views, mark as expired after showing content briefly
+        // This gives the user time to see and download/copy the content (30 seconds)
+        if (shareInfo?.isOneTimeView) {
+          setTimeout(() => {
+            setIsPermanentlyExpired(true);
+          }, 30000); // Wait 30 seconds - same as backend deletion delay
+        }
       } else {
         setError(result.error || 'Failed to load content');
       }
-
-      if (result.contentType === 'text' && shareInfo?.isOneTimeView) {
-        setIsPermanentlyExpired(true);
-      }
     } catch (err) {
-      if (err.error === 'Invalid password') {
-        setError('Invalid password. Please try again.');
+      if (err.error === 'Password required') {
+        setError('A password is required to access this share.');
+        setNeedsPassword(true);
+      } else if (err.error === 'Invalid password') {
+        setError('❌ Invalid password. Please try again.');
         setNeedsPassword(true);
       } else if (err.error === 'This link can only be viewed once') {
         setIsPermanentlyExpired(true);
-        setError('This one-time link has already been viewed.');
+        setError('⏰ This one-time link has already been viewed. The content has been deleted.');
       } else if (err.error === 'Maximum view count reached') {
         setContent(null);
-        setError('Maximum view count reached. This share is no longer available.');
+        setError('📊 This share has reached its maximum view count and is no longer available.');
+      } else if (err.error === 'Content not found or has expired' || err.error === 'Content has expired') {
+        setError('⏰ This share has expired and is no longer available.');
       } else {
         setError(err.error || 'Failed to load content');
       }
